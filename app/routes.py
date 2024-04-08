@@ -80,7 +80,7 @@ async def websocket_endpoint(websocket: WebSocket,db:db_dependency):
     await manager.connect(websocket)
 
     while True:
-        query = db.query(Data).all().pop()
+        query = db.query(Data).all().pop(0)
         data = SensorData(
             temperature = query.temperature,
             humidity = query.humidity,
