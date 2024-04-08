@@ -1,4 +1,4 @@
-
+import datetime
 
 from starlette import status
 from typing import List, Optional, Generic, TypeVar
@@ -22,3 +22,4 @@ class SensorData(BaseModel):
     temperature: float
     humidity: float
     CO2: float
+    time = datetime.time
