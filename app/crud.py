@@ -34,3 +34,4 @@ def insertData(data:SensorData,db:Session):
     db.add(temp)
     db.commit()
     db.refresh(temp)
+    return temp

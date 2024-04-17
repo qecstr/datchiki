@@ -7,7 +7,7 @@ import sqlalchemy as sql
 
 
 
-URL_DATABASE = 'postgresql://postgres:esik2002@localhost:5432/datchiki'
+URL_DATABASE = 'postgresql://postgres:postgres@db/postgres'
 engine = create_engine(URL_DATABASE)
 SessionLocal = sessionmaker(autocommit = False,autoflush=False, bind=engine)
 Base = declarative_base()

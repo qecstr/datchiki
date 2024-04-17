@@ -1,11 +1,14 @@
 import asyncio
 import datetime
+import json
 from typing import Annotated
 
 from fastapi import  WebSocket
+from starlette.websockets import WebSocketDisconnect
+
 from app.models import Data
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, event
 
 from sqlalchemy.orm import Session
 from starlette import status
@@ -72,39 +75,50 @@ class ConnectionManager:
 
         async def broadcast(self,data:SensorData):
             for connection in self.active_connections:
-                await connection.send_json(data)
+
+                await connection.send_json(DTOtoJson(data))
 
 manager = ConnectionManager()
 @router.websocket("/getData")
 async def websocket_endpoint(websocket: WebSocket,db:db_dependency):
     await manager.connect(websocket)
+    listOfSensors = db.query(Data).all()
+    try:
+        for sensor in listOfSensors:
 
-    while True:
-        query = db.query(Data).all().pop(0)
-        data = SensorData(
-            temperature = query.temperature,
-            humidity = query.humidity,
-            CO2 = query.CO2,
-            time = query.time
-        )
-        await manager.broadcast(data)
-        while query is None:
-            async with db as session:
-                result = await session.execute(select(Data))
-                items = result.scalars().all()
-                data = SensorData(
-                    temperature=items.temperature,
-                    humidity=items.humidity,
-                    CO2=items.CO2,
-                    time=items.time
+            await manager.broadcast(DTO(sensor))
+            await asyncio.sleep(1)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
+@event.listens_for(Data, "after_insert")
+async def after_data_insert(mapper, connection, target):
+    new_data = target
+    print(DTOtoJson(DTO(new_data)))
+
+    await asyncio.sleep(1)
+    await manager.broadcast(DTO(new_data))
+def DTO(data:Data):
+    temp = SensorData(
+                    temperature=data.temperature,
+                    humidity=data.humidity,
+                    CO2=data.CO2,
+                    time=data.time
                 )
-                await manager.broadcast(data)
-
-
-        await asyncio.sleep(1)
-
+    return temp
+def DTOtoJson(data: SensorData):
+    temp = json.dumps({
+        "temperature": data.temperature,
+        "humidity": data.humidity,
+        "CO2": data.CO2,
+        "time": data.time
+    }
+    )
+    return temp
 
 @router.post("/postData")
 async def postData(sensor_data: SensorData,db:db_dependency):
     print("Received sensor value:", sensor_data)
-    insertData(sensor_data,db)
+    temp = insertData(sensor_data,db)
+    await after_data_insert(None, None, temp)

@@ -1,5 +1,4 @@
 import datetime
-
 from starlette import status
 from typing import List, Optional, Generic, TypeVar
 from pydantic import BaseModel , Field
@@ -22,4 +21,4 @@ class SensorData(BaseModel):
     temperature: float
     humidity: float
     CO2: float
-    time = datetime.time
+    time: datetime.time
